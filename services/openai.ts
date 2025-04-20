@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { useLanguageStore } from '../store/language';
 
 const openai = new OpenAI({
@@ -130,7 +130,19 @@ function createDefaultResponse(language: string = 'fr'): ClothingCare {
   }
 }
 
-export async function analyzeClothing(imageBase64: string | string[]): Promise<ClothingCare> {
+const showAlert = (title='Error', error: any) => {
+  Alert.alert(
+    'Error',
+    error instanceof Error ? error.message : (error as string),
+    [
+      {
+        text: 'OK',
+      },
+    ]
+  );
+}
+
+export async function analyzeClothing(imageBase64: string | string[], retryCount=3): Promise<ClothingCare> {
   if (!imageBase64 || (Array.isArray(imageBase64) && imageBase64.length === 0)) {
     throw new Error("Image non fournie");
   }
@@ -316,6 +328,8 @@ Fill in the following JSON format with all the information you've indicated SPEC
       });
     }
 
+    console.log('messages=', messages)
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: messages,
@@ -330,6 +344,7 @@ Fill in the following JSON format with all the information you've indicated SPEC
     const content = response.choices[0]?.message?.content;
     if (!content) {
       console.error('No content in response:', response.choices[0]);
+      showAlert('Error', 'No content in response');
       return createDefaultResponse(locale);
     }
 
@@ -339,6 +354,7 @@ Fill in the following JSON format with all the information you've indicated SPEC
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         console.error('No JSON found in response:', content);
+        showAlert('Error', 'INo JSON found in response');
         // Instead of throwing an error, create a default response
         return createDefaultResponse(locale);
       }
@@ -350,6 +366,7 @@ Fill in the following JSON format with all the information you've indicated SPEC
         
         if (!validateResponse(analysis)) {
           console.error('Invalid response structure:', analysis);
+          showAlert('Error', 'Invalid response structure:');
           // If validation fails, merge with default response to fill in missing fields
           return { ...createDefaultResponse(locale), ...analysis };
         }
@@ -357,17 +374,19 @@ Fill in the following JSON format with all the information you've indicated SPEC
         return analysis;
       } catch (parseError) {
         console.error('Error parsing GPT response:', parseError, '\nRaw content:', content);
+        showAlert('Error', parseError);
         // Instead of throwing an error, return default response
         return createDefaultResponse(locale);
       }
     } catch (parseError) {
       console.error('Error parsing GPT response:', parseError, '\nRaw content:', content);
+      showAlert('Error', parseError);
       // Instead of throwing an error, return default response
       return createDefaultResponse(locale);
     }
   } catch (error) {
     console.error('Error analyzing clothing:', error);
-    
+    showAlert('Error', error)
     // For all errors, return the default response to ensure analysis always runs
     return createDefaultResponse(useLanguageStore.getState().locale);
   }
