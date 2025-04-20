@@ -62,6 +62,7 @@ export default function HistoryScreen() {
   const historyItems = useHistoryStore(state => state.items);
   const fetchUserHistory = useHistoryStore(state => state.fetchUserHistory);
   const [displayedItems, setDisplayedItems] = useState(historyItems);
+  console.log('historyItems=', historyItems);
 
   const { theme } = useContext(ThemeContext);
 

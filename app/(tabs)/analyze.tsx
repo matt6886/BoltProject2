@@ -255,11 +255,17 @@ export default function AnalyzeScreen() {
       setAnalysisResult(result);
       setLastCapturedImage(capturedImages[0].uri);
 
+      const mimeType = capturedImages[0].base64.startsWith('/9j/')
+        ? 'image/jpeg'
+        : 'image/png';
+
+        console.log('capturedImages[0].uri=', capturedImages[0].uri);
+
       addHistoryItem({
         name: result.title,
         temperature: result.summary.temperature,
         cycle: result.summary.program,
-        image: capturedImages[0].uri,
+        image: `data:${mimeType};base64,${capturedImages[0].base64}`,
         analysisResult: result,
         userId: user?.uid,
       });
